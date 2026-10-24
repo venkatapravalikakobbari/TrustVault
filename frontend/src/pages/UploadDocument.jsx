@@ -41,13 +41,25 @@ function UploadDocument() {
   const {
   data: { user },
   } = await supabase.auth.getUser()
+  if (!user) {
+  await supabase.storage
+    .from('documents')
+    .remove([filePath])
+
+  setMessage('You must be logged in to upload a document.')
+  return
+}
   const { data: tenantId, error: tenantError } = await supabase
   .rpc('get_user_tenant_id')
 
   if (tenantError) {
-    setMessage(tenantError.message)
-    return
-  }
+  await supabase.storage
+    .from('documents')
+    .remove([filePath])
+
+  setMessage(tenantError.message)
+  return
+}
   const { data: documentData, error: documentError } = await supabase
     .from('documents')
     .insert({
@@ -61,9 +73,13 @@ function UploadDocument() {
     .single()
 
   if (documentError) {
-    setMessage(documentError.message)
-    return
-  }
+  await supabase.storage
+    .from('documents')
+    .remove([filePath])
+
+  setMessage(documentError.message)
+  return
+}
 
   const { data: auditSuccess, error: auditError } = await supabase.rpc(
   'log_document_upload',

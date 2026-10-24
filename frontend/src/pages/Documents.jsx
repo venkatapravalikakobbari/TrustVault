@@ -1,24 +1,34 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { Link } from 'react-router-dom'
 
 
 
 function Documents() {
+  const navigate = useNavigate()
+  const handleLogout = async () => {
+  await supabase.auth.signOut()
+  navigate('/')
+}
   const [documents, setDocuments] = useState([])
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [user, setUser] = useState(null)
+  const [accessLevels, setAccessLevels] = useState({})
 
   useEffect(() => {
   const loadDocuments = async () => {
     const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser()
-
-    setUser(currentUser)
+  data: { user },
+} = await supabase.auth.getUser()
+    if (!user) {
+  setMessage('You must be logged in.')
+  return
+}
+    setUser(user)
 
     const { data, error } = await supabase
       .from('documents')
@@ -37,7 +47,27 @@ function Documents() {
     }
 
     setDocuments(data)
+    const levels = {}
+
+for (const document of data) {
+  if (document.owner_id === user.id) {
+    levels[document.id] = 'Owner'
+    continue
   }
+
+  const { data: permission } = await supabase
+    .from('document_permissions')
+    .select('permission')
+    .eq('document_id', document.id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  levels[document.id] = permission?.permission || 'READ'
+}
+
+setAccessLevels(levels)
+  }
+  
 
   loadDocuments()
 }, [])
@@ -87,79 +117,53 @@ if (!auditSuccess) {
 window.open(signedUrlData.signedUrl, '_blank')
 }
   const handleDelete = async (document) => {
-    const confirmed = window.confirm(
+  const confirmed = window.confirm(
     `Are you sure you want to delete "${document.name}"?`
-    )
+  )
 
-    if (!confirmed) {
-      return
-    }
-
-    const { error: storageError } = await supabase.storage
-      .from('documents')
-      .remove([document.storage_path])
-
-    if (storageError) {
-      setMessage(storageError.message)
-      return
-    }
-
-    const { data: deletedDocument, error: documentError } = await supabase
-  .from('documents')
-  .delete()
-  .eq('id', document.id)
-  .select()
-  .maybeSingle()
-
-if (documentError) {
-  setMessage(documentError.message)
-  return
-}
-
-if (!deletedDocument) {
-  setMessage('You are not allowed to delete this document.')
-  return
-}
-    const {
-  data: { user },
-} = await supabase.auth.getUser()
-
-const { data: tenantId, error: tenantError } = await supabase
-  .rpc('get_user_tenant_id')
-
-if (tenantError) {
-  setMessage(tenantError.message)
-  return
-}
-
-const { data: auditSuccess, error: auditError } = await supabase.rpc(
-  'log_document_delete',
-  {
-    doc_id: document.id,
+  if (!confirmed) {
+    return
   }
-)
 
-if (auditError) {
-  setMessage(auditError.message)
-  return
-}
+  // First verify ownership and create the DELETE audit record.
+  const { data: deleteSuccess, error: deleteError } = await supabase.rpc(
+    'delete_document',
+    {
+      doc_id: document.id,
+    }
+  )
 
-if (!auditSuccess) {
-  setMessage('You are not authorized to delete this document.')
-  return
-}
-
-    setDocuments((currentDocuments) =>
-      currentDocuments.filter((item) => item.id !== document.id)
-    )
-
-    setMessage('Document deleted successfully!')
+  if (deleteError) {
+    setMessage(deleteError.message)
+    return
   }
-  
+
+  if (!deleteSuccess) {
+    setMessage('You are not allowed to delete this document.')
+    return
+  }
+
+  // Now remove the actual file from Supabase Storage.
+  const { error: storageError } = await supabase.storage
+    .from('documents')
+    .remove([document.storage_path])
+
+  if (storageError) {
+    setMessage(storageError.message)
+    return
+  }
+
+  setDocuments((currentDocuments) =>
+    currentDocuments.filter((item) => item.id !== document.id)
+  )
+
+  setMessage('Document deleted successfully!')
+}
 
   return (
     <div>
       <h1>My Documents</h1>
+      <button onClick={handleLogout}>Logout</button>
       <input
        type="text"
        placeholder="Search documents..."
@@ -195,6 +199,7 @@ if (!auditSuccess) {
         <div key={document.id}>
           <h3>{document.name}</h3>
           <p>Category: {document.category}</p>
+          <p>Access: {accessLevels[document.id]}</p>
           <p>Created: {document.created_at}</p>
           
           <button onClick={() => handleDownload(document)}>

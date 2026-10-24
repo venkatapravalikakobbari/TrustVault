@@ -7,6 +7,7 @@ import Documents from './pages/Documents'
 import ShareDocument from './pages/ShareDocument'
 import EditDocument from './pages/EditDocument'
 import AdminDashboard from './pages/AdminDashboard'
+import ProtectedRoute from './ProtectedRoute'
 
 function App() {
   const [role, setRole] = useState(null)
@@ -33,6 +34,7 @@ function App() {
     }
 
     setRole(data.role)
+    
   }
 
   loadRole()
@@ -46,17 +48,47 @@ function App() {
         <Route
   path="/upload"
   element={
-    role === 'ADMIN' || role === 'OWNER'
-      ? <UploadDocument />
-      : <h2>Access Denied</h2>
+    <ProtectedRoute>
+      {role === 'ADMIN' || role === 'OWNER'
+        ? <UploadDocument />
+        : <h2>Access Denied</h2>}
+    </ProtectedRoute>
   }
 />
-        <Route path="/documents" element={<Documents />} />
-        <Route path="/share/:documentId" element={<ShareDocument />} />
-        <Route path="/edit/:documentId" element={<EditDocument />} />
-        {role === 'ADMIN' && (
-  <Route path="/admin" element={<AdminDashboard />} />
-)}
+        <Route
+  path="/documents"
+  element={
+    <ProtectedRoute>
+      <Documents />
+    </ProtectedRoute>
+  }
+/>
+        <Route
+  path="/share/:documentId"
+  element={
+    <ProtectedRoute>
+      <ShareDocument />
+    </ProtectedRoute>
+  }
+/>
+        <Route
+  path="/edit/:documentId"
+  element={
+    <ProtectedRoute>
+      <EditDocument />
+    </ProtectedRoute>
+  }
+/>
+        <Route
+  path="/admin"
+  element={
+    <ProtectedRoute>
+      {role === 'ADMIN'
+        ? <AdminDashboard />
+        : <h2>Access Denied</h2>}
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   </>

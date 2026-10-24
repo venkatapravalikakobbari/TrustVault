@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+window.supabase=supabase
 
 function ShareDocument() {
   const { documentId } = useParams()
@@ -181,7 +182,7 @@ const { data: auditSuccess, error: auditError } = await supabase.rpc(
   'log_permission_grant',
   {
     doc_id: documentId,
-    target_user_id: targetUserId,
+    target_user_id: userId,
     permission_level: permission,
   }
 )
