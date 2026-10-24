@@ -126,24 +126,26 @@ function ShareDocument() {
     return
   }
 
-  const { error: auditError } = await supabase
-    .from('audit_logs')
-    .insert({
-      tenant_id: tenantId,
-      user_id: user.id,
-      document_id: documentId,
-      action: 'UPDATE_PERMISSION',
-      success: true,
-      details: {
-        target_user_id: userId,
-        new_permission: permission,
-      },
-    })
-
-  if (auditError) {
-    setMessage(auditError.message)
-    return
+  const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_permission_update',
+  {
+    doc_id: documentId,
+    target_user_id: userId,
+    permission_level: permission,
   }
+)
+
+if (auditError) {
+  setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('Permission update could not be verified.')
+  return
+}
+
+  
 
   setMessage('Permission updated successfully!')
   return
@@ -175,24 +177,25 @@ if (tenantError) {
   return
 }
 
-const { error: auditError } = await supabase
-  .from('audit_logs')
-  .insert({
-    tenant_id: tenantId,
-    user_id: user.id,
-    document_id: documentId,
-    action: 'GRANT_ACCESS',
-    success: true,
-    details: {
-      target_user_id: userId,
-      permission: permission,
-    },
-  })
+const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_permission_grant',
+  {
+    doc_id: documentId,
+    target_user_id: targetUserId,
+    permission_level: permission,
+  }
+)
 
 if (auditError) {
   setMessage(auditError.message)
   return
 }
+
+if (!auditSuccess) {
+  setMessage('Permission grant could not be verified.')
+  return
+}
+
 
 setMessage('Access granted successfully!')
 }
@@ -247,21 +250,21 @@ if (tenantError) {
   return
 }
 
-const { error: auditError } = await supabase
-  .from('audit_logs')
-  .insert({
-    tenant_id: tenantId,
-    user_id: user.id,
-    document_id: documentId,
-    action: 'REVOKE_ACCESS',
-    success: true,
-    details: {
-      target_user_id: userId,
-    },
-  })
+const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_permission_revoke',
+  {
+    doc_id: documentId,
+    target_user_id: userId,
+  }
+)
 
 if (auditError) {
   setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('Permission revoke could not be verified.')
   return
 }
 
@@ -306,23 +309,23 @@ if (!deletedPermission) {
     return
   }
 
-  const { error: auditError } = await supabase
-    .from('audit_logs')
-    .insert({
-      tenant_id: tenantId,
-      user_id: user.id,
-      document_id: documentId,
-      action: 'REVOKE_ACCESS',
-      success: true,
-      details: {
-        target_user_id: userId,
-      },
-    })
-
-  if (auditError) {
-    setMessage(auditError.message)
-    return
+  const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_permission_revoke',
+  {
+    doc_id: documentId,
+    target_user_id: userId,
   }
+)
+
+if (auditError) {
+  setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('Permission revoke could not be verified.')
+  return
+}
 
   setPermissions((currentPermissions) =>
     currentPermissions.filter((item) => item.user_id !== userId)

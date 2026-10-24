@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { Link } from 'react-router-dom'
-window.supabase = supabase
+
 
 
 function Documents() {
@@ -67,38 +67,25 @@ if (!hasAccess) {
       return
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    const { data: tenantId, error: tenantError } = await supabase
-      .rpc('get_user_tenant_id')
-
-    if (tenantError) {
-      setMessage(tenantError.message)
-      return
-    }
-
-    const { error: auditError } = await supabase
-      .from('audit_logs')
-      .insert({
-        tenant_id: tenantId,
-        user_id: user.id,
-        document_id: document.id,
-        action: 'DOWNLOAD',
-        success: true,
-        details: {
-          file_name: document.name,
-        },
-      })
-
-    if (auditError) {
-      setMessage(auditError.message)
-      return
-    }
-
-    window.open(signedUrlData.signedUrl, '_blank')
+    const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_document_download',
+  {
+    doc_id: document.id,
+    file_name: document.name,
   }
+)
+
+if (auditError) {
+  setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('Download was not authorized.')
+  return
+}
+window.open(signedUrlData.signedUrl, '_blank')
+}
   const handleDelete = async (document) => {
     const confirmed = window.confirm(
     `Are you sure you want to delete "${document.name}"?`
@@ -145,22 +132,20 @@ if (tenantError) {
   return
 }
 
-const { error: auditError } = await supabase
-  .from('audit_logs')
-  .insert({
-    tenant_id: tenantId,
-    user_id: user.id,
-    document_id: null,
-    action: 'DELETE',
-    success: true,
-    details: {
-      document_id: document.id,
-      file_name: document.name,
-    },
-  })
+const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_document_delete',
+  {
+    doc_id: document.id,
+  }
+)
 
 if (auditError) {
   setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('You are not authorized to delete this document.')
   return
 }
 
@@ -170,13 +155,7 @@ if (auditError) {
 
     setMessage('Document deleted successfully!')
   }
-  const testStorageAccess = async () => {
-  const { data, error } = await supabase.storage
-    .from('documents')
-    .createSignedUrl('1792733308184-wallpaperflare.com_wallpaper.jpg', 60)
-
-  console.log('Storage test:', { data, error })
-}
+  
 
   return (
     <div>
@@ -217,9 +196,7 @@ if (auditError) {
           <h3>{document.name}</h3>
           <p>Category: {document.category}</p>
           <p>Created: {document.created_at}</p>
-          <button onClick={testStorageAccess}>
-  Test Storage Access
-</button>
+          
           <button onClick={() => handleDownload(document)}>
             Download
           </button>

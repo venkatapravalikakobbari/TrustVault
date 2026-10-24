@@ -65,23 +65,23 @@ function UploadDocument() {
     return
   }
 
-  const { error: auditError } = await supabase
-    .from('audit_logs')
-    .insert({
-      tenant_id: tenantId,
-      user_id: user.id,
-      document_id: documentData.id,
-      action: 'UPLOAD',
-      success: true,
-      details: {
-        file_name: name,
-      },
-    })
-
-  if (auditError) {
-    setMessage(auditError.message)
-    return
+  const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_document_upload',
+  {
+    doc_id: documentData.id,
+    file_name: name,
   }
+)
+
+if (auditError) {
+  setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('Upload audit verification failed.')
+  return
+}
 
   setMessage('File uploaded successfully!')
 }

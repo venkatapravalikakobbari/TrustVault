@@ -65,22 +65,22 @@ if (tenantError) {
   return
 }
 
-const { error: auditError } = await supabase
-  .from('audit_logs')
-  .insert({
-    tenant_id: tenantId,
-    user_id: user.id,
-    document_id: documentId,
-    action: 'EDIT',
-    success: true,
-    details: {
-      new_name: name,
-      new_category: category,
-    },
-  })
+const { data: auditSuccess, error: auditError } = await supabase.rpc(
+  'log_document_edit',
+  {
+    doc_id: documentId,
+    new_name: name,
+    new_category: category,
+  }
+)
 
 if (auditError) {
   setMessage(auditError.message)
+  return
+}
+
+if (!auditSuccess) {
+  setMessage('You are not authorized to edit this document.')
   return
 }
 
