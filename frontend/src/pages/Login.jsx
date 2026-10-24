@@ -25,42 +25,70 @@ function Login() {
   }
 
   return (
-    <div>
-      <h1>TrustVault</h1>
+    <div className="login-page">
+      <div className="login-background-shape shape-one"></div>
+      <div className="login-background-shape shape-two"></div>
 
-      <h2>Login</h2>
+      <div className="login-card">
+        <div className="login-brand">
+          <div className="login-logo">
+            T
+          </div>
 
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Email</label>
-          <br />
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
+          <div>
+            <h1>TrustVault</h1>
+            <p>Secure document management</p>
+          </div>
         </div>
 
-        <br />
-
-        <div>
-          <label>Password</label>
-          <br />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+        <div className="login-heading">
+          <h2>Welcome back</h2>
+          <p>Sign in to securely access your documents.</p>
         </div>
 
-        <br />
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="form-field">
+            <label htmlFor="email">Email address</label>
 
-        <button type="submit">Login</button>
-      </form>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </div>
 
-      {message && <p>{message}</p>}
+          <div className="form-field">
+            <label htmlFor="password">Password</label>
+
+            <input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </div>
+
+          {message && (
+            <div className="login-error">
+              {message}
+            </div>
+          )}
+
+          <button type="submit" className="login-button">
+            Sign in
+          </button>
+        </form>
+
+        <div className="login-security">
+          <span className="security-dot"></span>
+          Your documents are protected by secure access controls
+        </div>
+      </div>
     </div>
   )
 }
